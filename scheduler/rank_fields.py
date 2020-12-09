@@ -58,10 +58,6 @@ def load_fields(datestr = "20201209"):
     
     palomar = EarthLocation.of_site("Palomar")
     
-    ra_fs = fields["RA"].data
-    dec_fs = fields["Dec"].data
-    ztf_fs = SkyCoord(ra = ra_fs, dec = dec_fs, unit = 'degree')
-    
     ### get UTC sunrise and sunset time
     city_name = 'san diego'
     a = Astral()
@@ -95,10 +91,13 @@ def load_fields(datestr = "20201209"):
                           location=palomar)
     
     up_fs = np.ones(len(fields))
-    rise_hs = np.ones(len(fields))*99
-    set_hs = np.ones(len(fields))*99
+    duration_hs = np.zeros(len(fields))
     for i in range(len(fields)):
-        ztf_f_altazs_tonight = ztf_fs[i].transform_to(frame_tonight)
+        ra_f = fields["RA"].data[i]
+        dec_f = fields["Dec"].data[i]
+        ztf_f = SkyCoord(ra = ra_f, dec = dec_f, unit = 'degree')
+    
+        ztf_f_altazs_tonight = ztf_f.transform_to(frame_tonight)
         ztf_f_airmasss_tonight = ztf_f_altazs_tonight.secz.value
         ztf_f_alt_tonight = ztf_f_altazs_tonight.alt.deg # in degree
         ix = ztf_f_alt_tonight>0
@@ -107,14 +106,26 @@ def load_fields(datestr = "20201209"):
         else:
             delta_midnight_h = delta_midnight[ix].value
             airmass_tonight = ztf_f_airmasss_tonight[ix]
-            ind = np.where(airmass_tonight<2)[0]
-            if np.sum(ind)==0:
+            ind_ = np.where(airmass_tonight<2)
+            ind = ind_[0]
+            if np.sum(ind)<=1:
                 up_fs[i] = 0
             else:
-                rise_time = delta_midnight_h[ind[0]]
-                set_time = delta_midnight_h[ind[-1]]
-                rise_hs[i] = rise_time
-                set_hs[i] = set_time
+                if np.sum(np.diff(ind)!=1)!=0:
+                    temp = np.diff(ind)
+                    arg = np.where(temp!=1)[0][0]
+                    ind1 = ind[:arg+1]
+                    ind2 = ind[arg+1:]
+                    rise_time1 = delta_midnight_h[ind1[0]]
+                    set_time1 = delta_midnight_h[ind1[-1]]
+                    rise_time2 = delta_midnight_h[ind2[0]]
+                    set_time2 = delta_midnight_h[ind2[-1]]
+                    duration_hs[i] = (set_time1 - rise_time1) + (set_time2 - rise_time2)
+                else:
+                    rise_time = delta_midnight_h[ind[0]]
+                    set_time = delta_midnight_h[ind[-1]]
+                    duration_hs[i] = set_time - rise_time
+                    #print (rise_time, set_time)
         """
         plt.plot(delta_midnight_h, airmass_tonight)
         plt.ylim(4, 1)
@@ -123,9 +134,7 @@ def load_fields(datestr = "20201209"):
         """
         
     fields["up?"] = up_fs
-    fields["rise_h"] = rise_hs
-    fields["set_h"] = set_hs
-    fields["duration_h"] = fields["set_h"] - fields["rise_h"]
+    fields["duration_h"] = duration_hs
     result["fields"] = fields
     return result
 
@@ -289,7 +298,9 @@ def field_grids_realistic(datestr):
 
 
 if __name__=="__main__":
-    for datestr in ["20201209", "20201210", "20201211", "20201212",
+   
+    for datestr in [#"20201209",
+                    "20201210", "20201211", "20201212",
                     "20201213", "20201214", "20201215", "20201216",
                     "20201217", "20201218", "20201219", "20201220",
                     "20201221", "20201222", "20201223", "20201224",
@@ -299,5 +310,6 @@ if __name__=="__main__":
     
     
     
+    #field_grids_realistic("20201209")
     
     
