@@ -81,12 +81,15 @@ def SRG_pointing(datestr = "20200709"):
     phis = [0]
     thetas = [get_theta_given_phi(a, b, c, phis[0])]
     sep_degs = []
+    min_sep = 0.001
+    if datestr in ['20200921', '20200922', '20200923', '20200924']:
+        min_sep = 1
     for i in range(360):
         phi_now = phis[-1]
         theta_now = thetas[-1]
         
         # first of all, we assume that phi is uniformly scanned, but this is not the case
-        # so we use this as an initial guess, and adjust thhe step, such that
+        # so we use this as an initial guess, and adjust the step, such that
         # the angle between consecutive points are the same (~1 degree, 360 points)
         
         step_deg = 1
@@ -95,7 +98,8 @@ def SRG_pointing(datestr = "20200709"):
         theta_trial = get_theta_given_phi(a, b, c, phi_trial)
         cossep_trial = cos_in_sphere(theta_now, phi_now, theta_trial, phi_trial)
         sep_deg_trial = np.arccos(cossep_trial)/np.pi*180
-        while abs(sep_deg_trial-1)>0.001:
+        while abs(sep_deg_trial-1)>min_sep:
+            #print (step_deg, sep_deg_trial)
             step_deg /= sep_deg_trial
             step_rad = step_deg/180*np.pi
             phi_trial = phi_now + step_rad
@@ -259,11 +263,16 @@ def field_grids(datestr):
     
     
 if __name__=="__main__":
-    for datestr in ["20200711", "20200712", "20200713", "20200714",
-                    "20200715", "20200716", "20200717", "20200718",
-                    "20200719", "20200720", "20200721", "20200722",
-                    "20200723", "20200724", "20200725", "20200726",
-                    "20200727", "20200728", "20200729", "20200730",
-                    "20200731", "20200801"]:
+    datestr = "20200921"
+    dates = ['20200921',
+ '20200922',
+'20200923',
+ '20200924',
+ #'20200925',
+ #'20201030'
+ ]
+    for i in range(len(dates)):
+        datestr = dates[i]
         field_grids(datestr)
+    #field_grids(datestr)
     
